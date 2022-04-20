@@ -6,7 +6,7 @@ mod material;
 mod rigid_body;
 mod velocity;
 
-pub use collider::Collider;
+pub use collider::*;
 pub use forces::Forces;
 pub use inertia::Inertia;
 pub use mass::Mass;
