@@ -7,6 +7,4 @@ pub struct RigidBody {
     #[inspectable(ignore)]
     pub position: Point2,
     pub rotation: f32,
-    /// How bouncy the object is!
-    pub restitution: f32,
 }

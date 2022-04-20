@@ -28,4 +28,8 @@ impl Manifolds {
     pub fn set(&mut self, manifolds: Vec<Manifold>) {
         self.0 = manifolds;
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Manifold> {
+        self.0.iter()
+    }
 }
