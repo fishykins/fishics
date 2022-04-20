@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use prima::{Dot, Interact, Intersect, Vector2};
+use prima::{Dot, Interact, Intersect, Vector, Vector2};
 
 use crate::{
-    BroadPhasePairs, Collider, Forces, Manifold, Manifolds, Mass, PhysicsMaterial,
-    RigidBody, Velocity,
+    BroadPhasePairs, Collider, Forces, Manifold, Manifolds, Mass, PhysicsMaterial, RigidBody,
+    Velocity,
 };
 
 /// Steps the bodies.
@@ -13,6 +13,9 @@ pub fn integration(
 ) {
     let dt = time.delta_seconds();
     for (mut rb, mut force, mut velocity, mass) in bodies.iter_mut() {
+        if mass.raw() == 0.0 {
+            continue;
+        }
         // Symplectic Euler integration. The order of the next two lines is important!
         velocity.add_linear(force.collect() * mass.inv() * dt);
         rb.translate(velocity.linear() * dt);
@@ -37,10 +40,7 @@ pub fn broad_phase(
         let b_a = c_a.global_aabr(rb_a);
         let b_b = c_b.global_aabr(rb_b);
         if b_a.intersecting(&b_b) {
-            // TODO: Better duplicate detection.
-            if !pairs.contains(&(entity_b, entity_a)) {
-                pairs.push((entity_a, entity_b));
-            }
+            pairs.push((entity_a, entity_b));
         }
     }
     bf_pairs.pairs = pairs;
@@ -65,17 +65,15 @@ pub fn narrow_phase(
         let b_shape = b_col.shape.wrap(b_rb.position());
 
         if let Some(collision) = a_shape.collision(&b_shape) {
-            new_manifolds.push(Manifold::new(
-                *a,
-                *b,
-                collision,
-            ));
+            //println!("{:?}", collision);
+            new_manifolds.push(Manifold::new(*a, *b, collision));
         }
     }
     manifolds.set(new_manifolds);
 }
 
 pub fn impulse_resolution(
+    time: Res<Time>,
     manifolds: Res<Manifolds>,
     mut vel: Query<&mut Velocity>,
     mat: Query<&PhysicsMaterial>,
@@ -85,11 +83,14 @@ pub fn impulse_resolution(
         let collision = m.collision.clone();
         let a_vel = vel.get(m.a).unwrap();
         let b_vel = vel.get(m.b).unwrap();
-        let a_restitution = mat.get(m.a).unwrap().restitution;
-        let b_restitution = mat.get(m.b).unwrap().restitution;
-        let a_mass = mass.get(m.a).unwrap().inv();
-        let b_mass = mass.get(m.b).unwrap().inv();
-        let e = a_restitution.min(b_restitution);
+        let a_mat = mat.get(m.a).unwrap();
+        let b_mat = mat.get(m.b).unwrap();
+        let a_mass = mass.get(m.a).unwrap();
+        let b_mass = mass.get(m.b).unwrap();
+        let a_mass_inv = a_mass.inv();
+        let b_mass_inv = b_mass.inv();
+
+        let initial_magnitude_squared = a_vel.linear_mag_squared() + b_vel.linear_mag_squared();
 
         // Calculate relative velocity
         let rv: Vector2<f32> = b_vel.linear() - a_vel.linear();
@@ -99,24 +100,74 @@ pub fn impulse_resolution(
 
         // Do not resolve if velocities are separating
         if velocity_along_normal > 0.0 {
-            return;
+            println!("resolving");
+            continue;
         }
-        
+
+        // min restitution value.
+        let e = a_mat.restitution.min(b_mat.restitution);
+        let dt = time.delta_seconds();
+
         // Calc impulse scalar
-        let j = -(1.0 + e) * velocity_along_normal;
-        let j = j / a_mass + j / b_mass;
-        
+        let j = (-(1.0 + e) * velocity_along_normal) / (a_mass_inv + b_mass_inv);
+
         // Apply impulse
+        let mass_sum = a_mass.raw() + b_mass.raw();
+        let ratio_a = a_mass.raw() / mass_sum;
+        let ratio_b = b_mass.raw() / mass_sum;
         let impulse = collision.normal * j;
+        let mut a_v = a_vel.linear() - impulse * ratio_b * dt;
+        let mut b_v = b_vel.linear() + impulse * ratio_a * dt;
 
-        // Distribute according to mass
-        let mass_sum = a_mass + b_mass;
-        let ratio_a = a_mass / mass_sum;
-        let ratio_b = b_mass / mass_sum;
+        //? End of primary resolution- moving on to apply friction.
 
-        vel.get_mut(m.a).unwrap().sub_linear(impulse * ratio_a);
-        vel.get_mut(m.b).unwrap().add_linear(impulse * ratio_b);
+        // Calculate the new relative velocity.
+        let rv: Vector2<f32> = b_v - a_v;
 
-        println!("BOOP");
+        // Solve for tangent vector
+        let t: Vector2<f32> = rv - (collision.normal * rv.dot(&collision.normal));
+        let t = t.normalize();
+
+        // Solve for magnitude to apply along friction line
+        let jt = -(rv.dot(&t)) / (a_mass_inv + b_mass_inv);
+
+        if jt > 0.0 {
+            println!(
+                "rv: {:?}, van: {}, j: {}, t: {:?}, jt: {}",
+                rv, velocity_along_normal, j, t, jt
+            );
+
+            // PythagoreanSolve = A^2 + B^2 = C^2, solving for C given A and B
+            // Use to approximate mu given friction coefficients of each body
+            let mu = pythag_solver(a_mat.static_friction, b_mat.static_friction);
+
+            // Clamp magnitude of friction and create impluse vector
+            let friction_impulse = if jt.abs() < mu * jt {
+                t * jt
+            } else {
+                t * -j * pythag_solver(a_mat.dynamic_friction, b_mat.dynamic_friction)
+            };
+
+            a_v -= friction_impulse * a_mass_inv * dt;
+            b_v += friction_impulse * b_mass_inv * dt;
+        }
+
+        // Lets avoid drawing Newton from his grave and prevent the collision from generating more energy than it already has.
+        let resultant_magnitude_squared = pythag_sqr(a_v.x, a_v.y) + pythag_sqr(b_v.x, b_v.y);
+        let ratio = (initial_magnitude_squared / resultant_magnitude_squared).min(1.0);
+
+        a_v = a_v * ratio;
+        b_v = b_v * ratio;
+
+        vel.get_mut(m.a).unwrap().set_linear(a_v);
+        vel.get_mut(m.b).unwrap().set_linear(b_v);
     }
+}
+
+fn pythag_solver(a: f32, b: f32) -> f32 {
+    (a.powi(2) + b.powi(2)).sqrt()
+}
+
+fn pythag_sqr(a: f32, b: f32) -> f32 {
+    a.powi(2) + b.powi(2)
 }

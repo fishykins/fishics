@@ -24,7 +24,8 @@ impl Plugin for FishicsPlugin {
 
         app.add_system(integration)
             .add_system(broad_phase.after(integration))
-            .add_system(narrow_phase.after(broad_phase))
-            .add_system(impulse_resolution.after(narrow_phase));
+            .add_system(narrow_phase.after(broad_phase));
+
+        app.add_system(impulse_resolution.after(narrow_phase));
     }
 }

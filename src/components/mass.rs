@@ -11,7 +11,11 @@ impl Mass {
     }
 
     pub fn inv(self) -> f32 {
-        1.0 / self.0
+        if self.0 == 0.0 {
+            0.0
+        } else {
+            1.0 / self.0
+        }
     }
 
     pub fn raw(self) -> f32 {

@@ -5,6 +5,8 @@ use bevy_inspector_egui::Inspectable;
 pub struct PhysicsMaterial {
     pub density: f32,
     pub restitution: f32,
+    pub static_friction: f32,
+    pub dynamic_friction: f32,
 }
 
 impl PhysicsMaterial {
@@ -12,6 +14,8 @@ impl PhysicsMaterial {
         Self {
             density,
             restitution,
+            static_friction: 0.1,
+            dynamic_friction: 0.2,
         }
     }
 

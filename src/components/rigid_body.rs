@@ -9,16 +9,11 @@ pub struct RigidBody {
 }
 
 impl RigidBody {
-    pub fn new() -> Self {
+    pub fn new(position: Point2<f32>) -> Self {
         Self {
-            position: Vec2::new(0.0, 0.0),
+            position: Vec2::new(position.x, position.y),
             rotation: 0.0,
         }
-    }
-
-    pub fn with_position(mut self, position: Point2<f32>) -> Self {
-        self.set_position(position);
-        self
     }
 
     pub fn with_rotation(mut self, rotation: f32) -> Self {

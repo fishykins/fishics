@@ -21,7 +21,7 @@ impl Collider {
         }
     }
 
-    pub fn rect(height: f32, width: f32) -> Self {
+    pub fn rect(width: f32, height: f32) -> Self {
         Self {
             shape: AbstractShape::Aabr {
                 half_extents: (width / 2.0, height / 2.0),

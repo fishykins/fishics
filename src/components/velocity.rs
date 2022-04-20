@@ -26,6 +26,10 @@ impl Velocity {
         Vector2::new(self.linear.x, self.linear.y)
     }
 
+    pub fn linear_mag_squared(&self) -> f32 {
+        self.linear.x * self.linear.x + self.linear.y * self.linear.y
+    }
+
     pub fn set_linear(&mut self, linear: Vector2) {
         self.linear.x = linear.x;
         self.linear.y = linear.y;
