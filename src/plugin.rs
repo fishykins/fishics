@@ -2,6 +2,8 @@ use bevy_inspector_egui::RegisterInspectable;
 
 use crate::components::*;
 use crate::systems::*;
+use crate::BroadPhasePairs;
+use crate::Manifolds;
 use bevy::prelude::*;
 
 #[derive(Default)]
@@ -16,6 +18,9 @@ impl Plugin for FishicsPlugin {
             .register_inspectable::<Mass>()
             .register_inspectable::<Inertia>()
             .register_inspectable::<PhysicsMaterial>();
+
+        app.insert_resource(BroadPhasePairs::new())
+            .insert_resource(Manifolds::new());
 
         app.add_system(integration)
             .add_system(broad_phase.after(integration))

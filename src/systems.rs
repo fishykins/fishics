@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use prima::{Aabr, Circle, Dot, Interact, Intersect, Point2, Vector2};
+use prima::{Dot, Interact, Intersect, Vector2};
 
 use crate::{
-    BroadPhasePairs, Collider, ColliderShape, Forces, Manifold, Manifolds, Mass, PhysicsMaterial,
+    BroadPhasePairs, Collider, Forces, Manifold, Manifolds, Mass, PhysicsMaterial,
     RigidBody, Velocity,
 };
 
@@ -14,8 +14,8 @@ pub fn integration(
     let dt = time.delta_seconds();
     for (mut rb, mut force, mut velocity, mass) in bodies.iter_mut() {
         // Symplectic Euler integration. The order of the next two lines is important!
-        velocity.linear += force.collect() * mass.inv() * dt;
-        rb.position = rb.position + (velocity.linear * dt);
+        velocity.add_linear(force.collect() * mass.inv() * dt);
+        rb.translate(velocity.linear() * dt);
     }
 }
 
@@ -61,64 +61,15 @@ pub fn narrow_phase(
         let a_col = colliders.get(*a).unwrap();
         let b_col = colliders.get(*b).unwrap();
 
-        match a_col.shape {
-            ColliderShape::Aabr { half_extents } => {
-                let he = Point2::from(half_extents);
-                let aabr = Aabr::new(a_rb.position - he, a_rb.position + he);
-                match b_col.shape {
-                    ColliderShape::Aabr { half_extents } => {
-                        let he = Point2::from(half_extents);
-                        let aabr_2 = Aabr::new(b_rb.position - he, b_rb.position + he);
-                        if aabr.intersecting(&aabr_2) {
-                            // Rect-Rect Collision!
-                            new_manifolds.push(Manifold::new(
-                                *a,
-                                *b,
-                                aabr.collision(&aabr_2).unwrap(),
-                            ));
-                        }
-                    }
-                    ColliderShape::Circle { radius } => {
-                        let circle = Circle::new(b_rb.position, radius);
-                        if aabr.intersecting(&circle) {
-                            // Rect-Circle Collision!
-                            new_manifolds.push(Manifold::new(
-                                *a,
-                                *b,
-                                circle.collision(&aabr).unwrap(),
-                            ));
-                        }
-                    }
-                }
-            }
-            ColliderShape::Circle { radius } => {
-                let circle = Circle::new(a_rb.position, radius);
-                match b_col.shape {
-                    ColliderShape::Aabr { half_extents } => {
-                        let he = Point2::from(half_extents);
-                        let aabr = Aabr::new(b_rb.position - he, b_rb.position + he);
-                        if aabr.intersecting(&circle) {
-                            // Circle-Rect Collision!
-                            new_manifolds.push(Manifold::new(
-                                *a,
-                                *b,
-                                circle.collision(&aabr).unwrap(),
-                            ));
-                        }
-                    }
-                    ColliderShape::Circle { radius } => {
-                        let circle_2 = Circle::new(b_rb.position, radius);
-                        if circle.intersecting(&circle_2) {
-                            // Circle-Circle Collision!
-                            new_manifolds.push(Manifold::new(
-                                *a,
-                                *b,
-                                circle.collision(&circle_2).unwrap(),
-                            ));
-                        }
-                    }
-                }
-            }
+        let a_shape = a_col.shape.wrap(a_rb.position());
+        let b_shape = b_col.shape.wrap(b_rb.position());
+
+        if let Some(collision) = a_shape.collision(&b_shape) {
+            new_manifolds.push(Manifold::new(
+                *a,
+                *b,
+                collision,
+            ));
         }
     }
     manifolds.set(new_manifolds);
@@ -141,7 +92,7 @@ pub fn impulse_resolution(
         let e = a_restitution.min(b_restitution);
 
         // Calculate relative velocity
-        let rv: Vector2<f32> = b_vel.linear - a_vel.linear;
+        let rv: Vector2<f32> = b_vel.linear() - a_vel.linear();
 
         // Calc. relative velocity in terms of the normal direction
         let velocity_along_normal = rv.dot(&collision.normal);
@@ -150,14 +101,22 @@ pub fn impulse_resolution(
         if velocity_along_normal > 0.0 {
             return;
         }
-
+        
         // Calc impulse scalar
         let j = -(1.0 + e) * velocity_along_normal;
         let j = j / a_mass + j / b_mass;
-
+        
         // Apply impulse
         let impulse = collision.normal * j;
-        vel.get_mut(m.a).unwrap().linear -= impulse * a_mass;
-        vel.get_mut(m.b).unwrap().linear += impulse * b_mass;
+
+        // Distribute according to mass
+        let mass_sum = a_mass + b_mass;
+        let ratio_a = a_mass / mass_sum;
+        let ratio_b = b_mass / mass_sum;
+
+        vel.get_mut(m.a).unwrap().sub_linear(impulse * ratio_a);
+        vel.get_mut(m.b).unwrap().add_linear(impulse * ratio_b);
+
+        println!("BOOP");
     }
 }

@@ -6,12 +6,20 @@ pub struct BroadPhasePairs {
     pub pairs: Vec<(Entity, Entity)>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Manifolds(Vec<Manifold>);
 
+#[derive(Debug, Clone)]
 pub struct Manifold {
     pub a: Entity,
     pub b: Entity,
     pub collision: Collision<f32>,
+}
+
+impl BroadPhasePairs {
+    pub fn new() -> Self {
+        BroadPhasePairs { pairs: Vec::new() }
+    }
 }
 
 impl Manifold {
