@@ -6,8 +6,17 @@ use crate::BroadPhasePairs;
 use crate::Manifolds;
 use bevy::prelude::*;
 
-#[derive(Default)]
-pub struct FishicsPlugin {}
+pub struct FishicsPlugin {
+    pub use_default_broad_phase: bool,
+}
+
+impl Default for FishicsPlugin {
+    fn default() -> Self {
+        Self {
+            use_default_broad_phase: true,
+        }
+    }
+}
 
 impl Plugin for FishicsPlugin {
     fn build(&self, app: &mut App) {
@@ -22,10 +31,13 @@ impl Plugin for FishicsPlugin {
         app.insert_resource(BroadPhasePairs::new())
             .insert_resource(Manifolds::new());
 
-        app.add_system(integration)
-            .add_system(broad_phase.after(integration))
-            .add_system(narrow_phase.after(broad_phase));
+        app.add_system(integration.before(narrow_phase))
+            .add_system(narrow_phase.before(impulse_resolution));
 
-        app.add_system(impulse_resolution.after(narrow_phase));
+        if self.use_default_broad_phase {
+            app.add_system(broad_phase.before(narrow_phase).after(integration));
+        }
+
+        app.add_system(impulse_resolution);
     }
 }
