@@ -1,11 +1,11 @@
 use bevy_inspector_egui::Inspectable;
-use prima::{Circle, Aabr, Point2, Interact};
+use prima::{Circle, Aabr, Point, Interact};
 
 /// A wrapper for all valid shapes.
 #[derive(Debug, Clone, Copy)]
 pub enum ShapeWrapper {
     Circle(Circle),
-    Aabr(Aabr),
+    Aabr(Aabr<f32>),
 }
 
 /// Just stores the shapes extremities without positional data.
@@ -16,12 +16,12 @@ pub enum AbstractShape {
 }
 
 impl ShapeWrapper {
-    pub fn circle(center: Point2, radius: f32) -> Self {
+    pub fn circle(center: Point, radius: f32) -> Self {
         Self::Circle(Circle::new(center, radius))
     }
 
-    pub fn aabr(center: Point2, half_extents: (f32, f32)) -> Self {
-        Self::Aabr(Aabr::new(center - Point2::new(half_extents.0, half_extents.1), center + Point2::new(half_extents.0, half_extents.1)))
+    pub fn aabr(center: Point, half_extents: (f32, f32)) -> Self {
+        Self::Aabr(Aabr::new(center - Point::new(half_extents.0, half_extents.1), center + Point::new(half_extents.0, half_extents.1)))
     }
 }
 
@@ -34,7 +34,7 @@ impl AbstractShape {
         Self::Aabr { half_extents }
     }
 
-    pub fn wrap(self, position: Point2) -> ShapeWrapper {
+    pub fn wrap(self, position: Point) -> ShapeWrapper {
         match self {
             Self::Circle { radius } => ShapeWrapper::circle(position, radius),
             Self::Aabr { half_extents } => ShapeWrapper::aabr(position, half_extents),
@@ -69,7 +69,7 @@ impl Interact<f32> for ShapeWrapper {
         }
     }
 
-    fn nearest_extent(&self, other: &Self) -> Point2<f32> {
+    fn nearest_extent(&self, other: &Self) -> Point<f32> {
         match self {
             ShapeWrapper::Circle(self_circle) => {
                 match other {

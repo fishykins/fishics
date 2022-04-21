@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::{Aabr, Circle, Point2, Shape2};
+use prima::{Aabr, Circle, Point, Shape};
 use crate::{RigidBody, AbstractShape};
 
 pub const DEFAULT_LAYER: u8 = 0b0000_0001;
@@ -42,21 +42,21 @@ impl Collider {
         self
     }
 
-    pub fn global_aabr(&self, rb: &RigidBody) -> Aabr {
+    pub fn global_aabr(&self, rb: &RigidBody) -> Aabr<f32> {
         match self.shape {
             AbstractShape::Circle { radius } => Circle::new(rb.position(), radius).bounding_box(),
             AbstractShape::Aabr { half_extents } => {
-                let he = Point2::from(half_extents);
+                let he = Point::from(half_extents);
                 Aabr::new(rb.position() - he, rb.position() + he)
             }
         }
     }
 
-    pub fn as_shape(&self, rb: &RigidBody) -> Box<dyn Shape2<f32>> {
+    pub fn as_shape(&self, rb: &RigidBody) -> Box<dyn Shape<f32>> {
         match self.shape {
             AbstractShape::Circle { radius } => Box::new(Circle::new(rb.position(), radius)),
             AbstractShape::Aabr { half_extents } => {
-                let he = Point2::from(half_extents);
+                let he = Point::from(half_extents);
                 Box::new(Aabr::new(rb.position() - he, rb.position() + he))
             }
         }

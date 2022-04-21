@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::Vector2;
+use prima::Vector;
 
 #[derive(Debug, Clone, Default, Component, Inspectable)]
 pub struct Forces {
@@ -9,15 +9,15 @@ pub struct Forces {
 }
 
 impl Forces {
-    pub fn new(linear: Vector2<f32>) -> Self {
+    pub fn new(linear: Vector<f32>) -> Self {
         Self {
             x: linear.x,
             y: linear.y,
         }
     }
 
-    pub fn resultant(&self) -> Vector2<f32> {
-        Vector2::new(self.x, self.y)
+    pub fn resultant(&self) -> Vector<f32> {
+        Vector::new(self.x, self.y)
     }
 
     pub fn clear(&mut self) {
@@ -25,7 +25,7 @@ impl Forces {
         self.y = 0.0;
     }
 
-    pub fn collect(&mut self) -> Vector2<f32> {
+    pub fn collect(&mut self) -> Vector<f32> {
         let resultant = self.resultant();
         self.clear();
         resultant

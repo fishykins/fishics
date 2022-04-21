@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use prima::{Dot, Interact, Intersect, Vector, Vector2};
+use prima::{Dot, Interact, Intersect, Vector};
 
 use crate::{
     BroadPhasePairs, Collider, Forces, Manifold, Manifolds, Mass, PhysicsMaterial, RigidBody,
@@ -93,7 +93,7 @@ pub fn impulse_resolution(
         let initial_magnitude_squared = a_vel.linear_mag_squared() + b_vel.linear_mag_squared();
 
         // Calculate relative velocity
-        let rv: Vector2<f32> = b_vel.linear() - a_vel.linear();
+        let rv: Vector<f32> = b_vel.linear() - a_vel.linear();
 
         // Calc. relative velocity in terms of the normal direction
         let velocity_along_normal = rv.dot(&collision.normal);
@@ -122,10 +122,10 @@ pub fn impulse_resolution(
         //? End of primary resolution- moving on to apply friction.
 
         // Calculate the new relative velocity.
-        let rv: Vector2<f32> = b_v - a_v;
+        let rv: Vector<f32> = b_v - a_v;
 
         // Solve for tangent vector
-        let t: Vector2<f32> = rv - (collision.normal * rv.dot(&collision.normal));
+        let t: Vector<f32> = rv - (collision.normal * rv.dot(&collision.normal));
         let t = t.normalize();
 
         // Solve for magnitude to apply along friction line

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::{Point2, Vector2};
+use prima::{Point, Vector};
 
 #[derive(Debug, Clone, Copy, Default, Component, Inspectable)]
 pub struct RigidBody {
@@ -9,7 +9,7 @@ pub struct RigidBody {
 }
 
 impl RigidBody {
-    pub fn new(position: Point2<f32>) -> Self {
+    pub fn new(position: Point<f32>) -> Self {
         Self {
             position: Vec2::new(position.x, position.y),
             rotation: 0.0,
@@ -21,16 +21,16 @@ impl RigidBody {
         self
     }
 
-    pub fn position(&self) -> Point2 {
-        Point2::new(self.position.x, self.position.y)
+    pub fn position(&self) -> Point {
+        Point::new(self.position.x, self.position.y)
     }
 
-    pub fn set_position(&mut self, position: Point2<f32>) {
+    pub fn set_position(&mut self, position: Point<f32>) {
         self.position.x = position.x;
         self.position.y = position.y;
     }
 
-    pub fn translate(&mut self, translation: Vector2<f32>) {
+    pub fn translate(&mut self, translation: Vector<f32>) {
         self.position.x += translation.x;
         self.position.y += translation.y;
     }
