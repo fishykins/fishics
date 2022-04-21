@@ -1,9 +1,9 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use prima::{Dot, Interact, Intersect, Vector};
 
 use crate::{
-    BroadPhasePairs, Collider, Forces, Manifold, Manifolds, Mass, PhysicsMaterial, RigidBody,
-    Velocity,
+    BroadPhasePairs, Collider, ColliderRender, FishicsConfig, Forces, Manifold, Manifolds, Mass,
+    PhysicsMaterial, RigidBody, Velocity, AbstractShape,
 };
 
 /// Steps the bodies.
@@ -100,7 +100,6 @@ pub fn impulse_resolution(
 
         // Do not resolve if velocities are separating
         if velocity_along_normal > 0.0 {
-            println!("resolving");
             continue;
         }
 
@@ -164,10 +163,76 @@ pub fn impulse_resolution(
     }
 }
 
+pub fn speed_limmit(cfg: Res<FishicsConfig>, mut vel: Query<&mut Velocity>) {
+    for mut vel in vel.iter_mut() {
+        let v = vel.linear();
+        let speed = v.magnitude_squared();
+        if speed > cfg.max_speed_squared() {
+            vel.set_linear(v.normalize() * cfg.max_speed());
+        }
+    }
+}
+
+pub fn apply_transforms(cfg: Res<FishicsConfig>, mut bodies: Query<(&mut Transform, &RigidBody)>) {
+    for (mut transform, rigid_body) in bodies.iter_mut() {
+        let pos = Vec3::new(
+            rigid_body.position.x * cfg.scale,
+            rigid_body.position.y * cfg.scale,
+            0.0,
+        );
+        transform.translation = pos;
+    }
+}
+
+pub fn create_mesh_renders(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    cfg: Res<FishicsConfig>,
+    colliders: Query<&Collider>,
+    new_renderables: Query<(Entity, &ColliderRender), Without<Handle<Mesh>>>,
+) {
+    for (entity, col_renderer) in new_renderables.iter() {
+        if let Some(collider) = colliders.get(entity).ok() {
+            if let Some((mesh, scale)) = generate_mesh(collider.shape) {
+                let transform = Transform::from_scale(scale * cfg.scale);
+
+                let bundle = MaterialMesh2dBundle {
+                    mesh: meshes.add(mesh).into(),
+                    material: materials.add(col_renderer.colour.into()),
+                    transform,
+                    ..Default::default()
+                };
+
+                commands.entity(entity).insert_bundle(bundle);
+            }
+        }
+    }
+}
+
+pub fn update_mesh_renders() {}
+
+// ============================================================================
+// ============================================================================
+
 fn pythag_solver(a: f32, b: f32) -> f32 {
     (a.powi(2) + b.powi(2)).sqrt()
 }
 
 fn pythag_sqr(a: f32, b: f32) -> f32 {
     a.powi(2) + b.powi(2)
+}
+
+fn generate_mesh(shape: AbstractShape) -> Option<(Mesh, Vec3)> {
+    match shape {
+        AbstractShape::Circle { radius: _ } => None,
+        AbstractShape::Aabr { half_extents } => {
+            let mesh = Mesh::from(shape::Quad {
+                size: Vec2::new(2.0, 2.0),
+            flip: false,
+            });
+            let scale = Vec3::new(half_extents.0, half_extents.1, 1.0);
+            Some((mesh, scale))
+        },
+    }
 }

@@ -10,4 +10,5 @@ pub struct RigidBodyBundle {
     pub velocity: Velocity,
     pub forces: Forces,
     pub material: PhysicsMaterial,
+    pub render: ColliderRender,
 }
