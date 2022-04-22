@@ -234,5 +234,6 @@ fn generate_mesh(shape: AbstractShape) -> Option<(Mesh, Vec3)> {
             let scale = Vec3::new(half_extents.0, half_extents.1, 1.0);
             Some((mesh, scale))
         },
+        AbstractShape::Line { start: _, end: _ } => None,
     }
 }

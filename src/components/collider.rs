@@ -1,7 +1,7 @@
+use crate::{AbstractShape, RigidBody};
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
 use prima::{Aabr, Circle, Point, Shape};
-use crate::{RigidBody, AbstractShape};
 
 pub const DEFAULT_LAYER: u8 = 0b0000_0001;
 
@@ -47,7 +47,10 @@ impl Collider {
             AbstractShape::Circle { radius } => Circle::new(rb.position(), radius).bounding_box(),
             AbstractShape::Aabr { half_extents } => {
                 let he = Point::from(half_extents);
-                Aabr::new(rb.position() - he, rb.position() + he)
+                Aabr::new((rb.position() - he).into(), rb.position() + he)
+            }
+            AbstractShape::Line { start: a, end: b } => {
+                Aabr::new(Point::new(a.x, a.y), Point::new(b.x, b.y))
             }
         }
     }
@@ -57,8 +60,9 @@ impl Collider {
             AbstractShape::Circle { radius } => Box::new(Circle::new(rb.position(), radius)),
             AbstractShape::Aabr { half_extents } => {
                 let he = Point::from(half_extents);
-                Box::new(Aabr::new(rb.position() - he, rb.position() + he))
+                Box::new(Aabr::new((rb.position() - he).into(), rb.position() + he))
             }
+            AbstractShape::Line { start: _, end: _ } => todo!(),
         }
     }
 }
