@@ -37,6 +37,16 @@ impl Collider {
         }
     }
 
+    pub fn line(start: Point, end: Point) -> Self {
+        Self {
+            shape: AbstractShape::Line {
+                start: Vec2::new(start.x, start.y),
+                end: Vec2::new(end.x, end.y),
+            },
+            layer: DEFAULT_LAYER,
+        }
+    }
+
     pub fn with_layers(mut self, layers: u8) -> Self {
         self.layer = layers;
         self

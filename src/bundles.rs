@@ -12,3 +12,11 @@ pub struct RigidBodyBundle {
     pub material: PhysicsMaterial,
     pub render: ColliderRender,
 }
+
+#[derive(Bundle, Default)]
+pub struct StaticRigidBodyBundle {
+    pub rb: RigidBody,
+    pub collider: Collider,
+    pub material: PhysicsMaterial,
+    pub render: ColliderRender,
+}

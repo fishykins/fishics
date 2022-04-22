@@ -79,14 +79,17 @@ pub fn impulse_resolution(
     mat: Query<&PhysicsMaterial>,
     mass: Query<&Mass>,
 ) {
+    let default_velocity = Velocity::default();
+    let default_mass = Mass::default();
+
     for m in manifolds.iter() {
         let collision = m.collision.clone();
-        let a_vel = vel.get(m.a).unwrap();
-        let b_vel = vel.get(m.b).unwrap();
+        let a_vel = vel.get(m.a).unwrap_or(&default_velocity);
+        let b_vel = vel.get(m.b).unwrap_or(&default_velocity);
         let a_mat = mat.get(m.a).unwrap();
         let b_mat = mat.get(m.b).unwrap();
-        let a_mass = mass.get(m.a).unwrap();
-        let b_mass = mass.get(m.b).unwrap();
+        let a_mass = mass.get(m.a).unwrap_or(&default_mass);
+        let b_mass = mass.get(m.b).unwrap_or(&default_mass);
         let a_mass_inv = a_mass.inv();
         let b_mass_inv = b_mass.inv();
 
@@ -98,6 +101,11 @@ pub fn impulse_resolution(
         // Calc. relative velocity in terms of the normal direction
         let velocity_along_normal = rv.dot(&collision.normal);
 
+        println!("{:?}", collision);
+        println!("relative velocity: {:?} - {:?} = {:?}", b_vel.linear(), a_vel.linear(), rv);
+        println!("velocity along normal: {}", velocity_along_normal);
+        
+        
         // Do not resolve if velocities are separating
         if velocity_along_normal > 0.0 {
             continue;
@@ -110,13 +118,17 @@ pub fn impulse_resolution(
         // Calc impulse scalar
         let j = (-(1.0 + e) * velocity_along_normal) / (a_mass_inv + b_mass_inv);
 
+        println!("j: {}", j);
+
         // Apply impulse
         let mass_sum = a_mass.raw() + b_mass.raw();
-        let ratio_a = a_mass.raw() / mass_sum;
-        let ratio_b = b_mass.raw() / mass_sum;
         let impulse = collision.normal * j;
-        let mut a_v = a_vel.linear() - impulse * ratio_b * dt;
-        let mut b_v = b_vel.linear() + impulse * ratio_a * dt;
+        let impulse_a = impulse * a_mass.raw() / mass_sum * dt;
+        let impulse_b = impulse * b_mass.raw() / mass_sum * dt;
+        let mut a_v = a_vel.linear() - impulse_a;
+        let mut b_v = b_vel.linear() + impulse_b;
+
+        println!("A: {:?}, B: {:?}", impulse_a, impulse_b);
 
         //? End of primary resolution- moving on to apply friction.
 
@@ -131,13 +143,6 @@ pub fn impulse_resolution(
         let jt = -(rv.dot(&t)) / (a_mass_inv + b_mass_inv);
 
         if jt > 0.0 {
-            println!(
-                "rv: {:?}, van: {}, j: {}, t: {:?}, jt: {}",
-                rv, velocity_along_normal, j, t, jt
-            );
-
-            // PythagoreanSolve = A^2 + B^2 = C^2, solving for C given A and B
-            // Use to approximate mu given friction coefficients of each body
             let mu = pythag_solver(a_mat.static_friction, b_mat.static_friction);
 
             // Clamp magnitude of friction and create impluse vector
@@ -155,11 +160,15 @@ pub fn impulse_resolution(
         let resultant_magnitude_squared = pythag_sqr(a_v.x, a_v.y) + pythag_sqr(b_v.x, b_v.y);
         let ratio = (initial_magnitude_squared / resultant_magnitude_squared).min(1.0);
 
-        a_v = a_v * ratio;
-        b_v = b_v * ratio;
+        println!("Magnitude change: {:?}", initial_magnitude_squared / resultant_magnitude_squared);
+
+        //a_v = a_v * ratio;
+        //b_v = b_v * ratio;
 
         vel.get_mut(m.a).unwrap().set_linear(a_v);
         vel.get_mut(m.b).unwrap().set_linear(b_v);
+
+        std::process::exit(6002);
     }
 }
 
@@ -173,12 +182,17 @@ pub fn speed_limmit(cfg: Res<FishicsConfig>, mut vel: Query<&mut Velocity>) {
     }
 }
 
-pub fn apply_transforms(cfg: Res<FishicsConfig>, mut bodies: Query<(&mut Transform, &RigidBody)>) {
-    for (mut transform, rigid_body) in bodies.iter_mut() {
+pub fn apply_transforms(cfg: Res<FishicsConfig>, mut bodies: Query<(&mut Transform, &RigidBody, Option<&Mass>)>) {
+    for (mut transform, rigid_body, mass) in bodies.iter_mut() {
+        let z = if let Some(mass) = mass {
+            mass.inv()
+        } else {
+            1.0
+        };
         let pos = Vec3::new(
             rigid_body.position.x * cfg.scale,
             rigid_body.position.y * cfg.scale,
-            0.0,
+            z,
         );
         transform.translation = pos;
     }
@@ -225,7 +239,10 @@ fn pythag_sqr(a: f32, b: f32) -> f32 {
 
 fn generate_mesh(shape: AbstractShape) -> Option<(Mesh, Vec3)> {
     match shape {
-        AbstractShape::Circle { radius: _ } => None,
+        AbstractShape::Circle { radius } => {
+            let mesh = crate::build_circle(radius, 32);
+            Some((mesh, Vec3::new(1.0, 1.0, 1.0)))
+        },
         AbstractShape::Aabr { half_extents } => {
             let mesh = Mesh::from(shape::Quad {
                 size: Vec2::new(2.0, 2.0),
@@ -234,6 +251,10 @@ fn generate_mesh(shape: AbstractShape) -> Option<(Mesh, Vec3)> {
             let scale = Vec3::new(half_extents.0, half_extents.1, 1.0);
             Some((mesh, scale))
         },
-        AbstractShape::Line { start: _, end: _ } => None,
+        AbstractShape::Line { start, end, } => {
+            
+
+            None
+        },
     }
 }
