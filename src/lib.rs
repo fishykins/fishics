@@ -5,7 +5,9 @@ mod plugin;
 mod resources;
 mod shapes;
 mod systems;
+mod impulse;
 
+pub use impulse::*;
 pub use bundles::*;
 pub use components::*;
 pub use mesh::*;

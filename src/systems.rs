@@ -1,9 +1,9 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
-use prima::{Dot, Interact, Intersect, Vector};
+use prima::{Interact, Intersect};
 
 use crate::{
-    BroadPhasePairs, Collider, ColliderRender, FishicsConfig, Forces, Manifold, Manifolds, Mass,
-    PhysicsMaterial, RigidBody, Velocity, AbstractShape,
+    AbstractShape, BroadPhasePairs, Collider, ColliderRender, FishicsConfig, Forces, Manifold,
+    Manifolds, Mass, RigidBody, Velocity,
 };
 
 /// Steps the bodies.
@@ -17,7 +17,7 @@ pub fn integration(
             continue;
         }
         // Symplectic Euler integration. The order of the next two lines is important!
-        velocity.add_linear(force.collect() * mass.inv() * dt);
+        velocity.add_linear(force.collect_impulse() * mass.inv() * dt);
         rb.translate(velocity.linear() * dt);
     }
 }
@@ -75,100 +75,31 @@ pub fn narrow_phase(
 pub fn impulse_resolution(
     time: Res<Time>,
     manifolds: Res<Manifolds>,
-    mut vel: Query<&mut Velocity>,
-    mat: Query<&PhysicsMaterial>,
-    mass: Query<&Mass>,
+    rbq: Query<&RigidBody>,
+    mq: Query<&Mass>,
+    mut vq: Query<&mut Velocity>,
 ) {
-    let default_velocity = Velocity::default();
-    let default_mass = Mass::default();
+    let dt = time.delta_seconds();
 
-    for m in manifolds.iter() {
-        let collision = m.collision.clone();
-        let a_vel = vel.get(m.a).unwrap_or(&default_velocity);
-        let b_vel = vel.get(m.b).unwrap_or(&default_velocity);
-        let a_mat = mat.get(m.a).unwrap();
-        let b_mat = mat.get(m.b).unwrap();
-        let a_mass = mass.get(m.a).unwrap_or(&default_mass);
-        let b_mass = mass.get(m.b).unwrap_or(&default_mass);
-        let a_mass_inv = a_mass.inv();
-        let b_mass_inv = b_mass.inv();
+    for manifold in manifolds.iter() {
+        // Collect impulse data.
+        let (a, b) = crate::generate_impulse_pair(manifold, &mut vq, &mq, &rbq);
 
-        let initial_magnitude_squared = a_vel.linear_mag_squared() + b_vel.linear_mag_squared();
+        // Calculate the initial force of the collision.
+        let initial_force = a.m * a.v.magnitude() + b.m * b.v.magnitude();
 
-        // Calculate relative velocity
-        let rv: Vector<f32> = b_vel.linear() - a_vel.linear();
+        // Send impulse data to the collision resolution function.
+        let (a, b) = crate::resolve_impulse(manifold.with_initial_force(initial_force), a, b, dt);
 
-        // Calc. relative velocity in terms of the normal direction
-        let velocity_along_normal = rv.dot(&collision.normal);
+        // Apply impulses!
+        let mut va = vq.get_mut(manifold.a).unwrap();
+        va.set_linear(a.v);
+        va.set_angular(a.r);
+        let mut vb = vq.get_mut(manifold.b).unwrap();
+        vb.set_linear(b.v);
+        vb.set_angular(b.r);
 
-        println!("{:?}", collision);
-        println!("relative velocity: {:?} - {:?} = {:?}", b_vel.linear(), a_vel.linear(), rv);
-        println!("velocity along normal: {}", velocity_along_normal);
-        
-        
-        // Do not resolve if velocities are separating
-        if velocity_along_normal > 0.0 {
-            continue;
-        }
-
-        // min restitution value.
-        let e = a_mat.restitution.min(b_mat.restitution);
-        let dt = time.delta_seconds();
-
-        // Calc impulse scalar
-        let j = (-(1.0 + e) * velocity_along_normal) / (a_mass_inv + b_mass_inv);
-
-        println!("j: {}", j);
-
-        // Apply impulse
-        let mass_sum = a_mass.raw() + b_mass.raw();
-        let impulse = collision.normal * j;
-        let impulse_a = impulse * a_mass.raw() / mass_sum * dt;
-        let impulse_b = impulse * b_mass.raw() / mass_sum * dt;
-        let mut a_v = a_vel.linear() - impulse_a;
-        let mut b_v = b_vel.linear() + impulse_b;
-
-        println!("A: {:?}, B: {:?}", impulse_a, impulse_b);
-
-        //? End of primary resolution- moving on to apply friction.
-
-        // Calculate the new relative velocity.
-        let rv: Vector<f32> = b_v - a_v;
-
-        // Solve for tangent vector
-        let t: Vector<f32> = rv - (collision.normal * rv.dot(&collision.normal));
-        let t = t.normalize();
-
-        // Solve for magnitude to apply along friction line
-        let jt = -(rv.dot(&t)) / (a_mass_inv + b_mass_inv);
-
-        if jt > 0.0 {
-            let mu = pythag_solver(a_mat.static_friction, b_mat.static_friction);
-
-            // Clamp magnitude of friction and create impluse vector
-            let friction_impulse = if jt.abs() < mu * jt {
-                t * jt
-            } else {
-                t * -j * pythag_solver(a_mat.dynamic_friction, b_mat.dynamic_friction)
-            };
-
-            a_v -= friction_impulse * a_mass_inv * dt;
-            b_v += friction_impulse * b_mass_inv * dt;
-        }
-
-        // Lets avoid drawing Newton from his grave and prevent the collision from generating more energy than it already has.
-        let resultant_magnitude_squared = pythag_sqr(a_v.x, a_v.y) + pythag_sqr(b_v.x, b_v.y);
-        let ratio = (initial_magnitude_squared / resultant_magnitude_squared).min(1.0);
-
-        println!("Magnitude change: {:?}", initial_magnitude_squared / resultant_magnitude_squared);
-
-        //a_v = a_v * ratio;
-        //b_v = b_v * ratio;
-
-        vel.get_mut(m.a).unwrap().set_linear(a_v);
-        vel.get_mut(m.b).unwrap().set_linear(b_v);
-
-        std::process::exit(6002);
+        //std::process::exit(6002);
     }
 }
 
@@ -182,7 +113,10 @@ pub fn speed_limmit(cfg: Res<FishicsConfig>, mut vel: Query<&mut Velocity>) {
     }
 }
 
-pub fn apply_transforms(cfg: Res<FishicsConfig>, mut bodies: Query<(&mut Transform, &RigidBody, Option<&Mass>)>) {
+pub fn apply_transforms(
+    cfg: Res<FishicsConfig>,
+    mut bodies: Query<(&mut Transform, &RigidBody, Option<&Mass>)>,
+) {
     for (mut transform, rigid_body, mass) in bodies.iter_mut() {
         let z = if let Some(mass) = mass {
             mass.inv()
@@ -229,32 +163,20 @@ pub fn update_mesh_renders() {}
 // ============================================================================
 // ============================================================================
 
-fn pythag_solver(a: f32, b: f32) -> f32 {
-    (a.powi(2) + b.powi(2)).sqrt()
-}
-
-fn pythag_sqr(a: f32, b: f32) -> f32 {
-    a.powi(2) + b.powi(2)
-}
-
 fn generate_mesh(shape: AbstractShape) -> Option<(Mesh, Vec3)> {
     match shape {
         AbstractShape::Circle { radius } => {
             let mesh = crate::build_circle(radius, 32);
             Some((mesh, Vec3::new(1.0, 1.0, 1.0)))
-        },
+        }
         AbstractShape::Aabr { half_extents } => {
             let mesh = Mesh::from(shape::Quad {
                 size: Vec2::new(2.0, 2.0),
-            flip: false,
+                flip: false,
             });
             let scale = Vec3::new(half_extents.0, half_extents.1, 1.0);
             Some((mesh, scale))
-        },
-        AbstractShape::Line { start, end, } => {
-            
-
-            None
-        },
+        }
+        AbstractShape::Line { start: _, end: _ } => None,
     }
 }

@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use prima::Collision;
-
+use prima::{Collision, Vector};
 #[derive(Debug, Clone)]
 pub struct BroadPhasePairs {
     pub pairs: Vec<(Entity, Entity)>,
@@ -20,7 +19,9 @@ pub struct FishicsConfig {
 pub struct Manifold {
     pub a: Entity,
     pub b: Entity,
-    pub collision: Collision<f32>,
+    pub n: Vector<f32>,
+    pub p: f32,
+    f: Option<f32>,
 }
 
 impl BroadPhasePairs {
@@ -31,7 +32,25 @@ impl BroadPhasePairs {
 
 impl Manifold {
     pub fn new(a: Entity, b: Entity, collision: Collision<f32>) -> Self {
-        Self { a, b, collision }
+        let n = collision.normal;
+        let p = collision.penetration;
+        Self {
+            a,
+            b,
+            n,
+            p,
+            f: None,
+        }
+    }
+
+    pub fn with_initial_force(&self, f: f32) -> Self {
+        let mut new = self.clone();
+        new.f = Some(f);
+        new
+    }
+
+    pub fn f(&self) -> f32 {
+        self.f.unwrap_or(0.0)
     }
 }
 

@@ -1,5 +1,5 @@
 use bevy::{
-    render::mesh::{Indices, Mesh, PrimitiveTopology}, math::Vec2,
+    render::mesh::{Indices, Mesh, PrimitiveTopology}, 
 };
 
 const PI2: f32 = std::f32::consts::PI * 2.0;

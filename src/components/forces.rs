@@ -4,30 +4,21 @@ use prima::Vector;
 
 #[derive(Debug, Clone, Default, Component, Inspectable)]
 pub struct Forces {
+    /// the horizontal impulse applied to the entity
     x: f32,
+    /// the vertical impulse applied to the entity
     y: f32,
 }
 
 impl Forces {
-    pub fn new(linear: Vector<f32>) -> Self {
-        Self {
-            x: linear.x,
-            y: linear.y,
-        }
+    pub fn add_impulse(&mut self, impule: Vector<f32>) {
+        self.x += impule.x;
+        self.y += impule.y;
     }
-
-    pub fn resultant(&self) -> Vector<f32> {
-        Vector::new(self.x, self.y)
-    }
-
-    pub fn clear(&mut self) {
+    pub fn collect_impulse(&mut self) -> Vector<f32> {
+        let impulse = Vector::new(self.x, self.y);
         self.x = 0.0;
         self.y = 0.0;
-    }
-
-    pub fn collect(&mut self) -> Vector<f32> {
-        let resultant = self.resultant();
-        self.clear();
-        resultant
+        impulse
     }
 }
