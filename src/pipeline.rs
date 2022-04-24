@@ -1,7 +1,6 @@
 use crate::components::{Mass, RigidBody, Velocity};
 use bevy::prelude::*;
 use prima::{Collision, Point, Vector};
-
 #[derive(Debug, Clone)]
 pub struct BroadPhasePairs {
     pub pairs: Vec<(Entity, Entity)>,

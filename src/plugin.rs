@@ -1,14 +1,13 @@
 use crate::components::*;
-use crate::resources::*;
-use crate::systems::{core::*, transforms::*, render::*};
 use crate::pipeline::*;
+use crate::resources::*;
+use crate::systems::{core::*, render::*, transforms::*};
 use bevy::prelude::*;
 use bevy_inspector_egui::RegisterInspectable;
 
 pub struct FishicsPlugin {
     pub apply_transforms: bool,
     pub render_colliders: bool,
-    pub use_default_broad_phase: bool,
     pub config: FishicsConfig,
 }
 
@@ -17,13 +16,13 @@ impl Default for FishicsPlugin {
         Self {
             apply_transforms: true,
             render_colliders: true,
-            use_default_broad_phase: true,
             config: FishicsConfig::default(),
         }
     }
 }
 
-impl Plugin for FishicsPlugin {
+impl Plugin for FishicsPlugin
+{
     fn build(&self, app: &mut App) {
         app.register_inspectable::<RigidBody>()
             .register_inspectable::<Collider>()
@@ -32,20 +31,19 @@ impl Plugin for FishicsPlugin {
             .register_inspectable::<Mass>()
             .register_inspectable::<Inertia>()
             .register_inspectable::<PhysicsMaterial>()
-            .register_inspectable::<ColliderRender>();
+            .register_inspectable::<ColliderRender>()
+            .register_inspectable::<ClassicImpulseResolver>();
 
         app.insert_resource(BroadPhasePairs::new())
             .insert_resource(Manifolds::new())
-            .insert_resource(self.config.clone());
+            .insert_resource(self.config.clone())
+            .insert_resource(ClassicImpulseResolver::default());
 
         app.add_asset::<PhysicsMaterial>();
 
         app.add_system(integration.before(narrow_phase))
-            .add_system(narrow_phase.before(impulse_resolution));
-
-        if self.use_default_broad_phase {
-            app.add_system(broad_phase.before(narrow_phase).after(integration));
-        }
+            .add_system(narrow_phase.before(impulse_resolution::<ClassicImpulseResolver>))
+            .add_system(broad_phase.before(narrow_phase).after(integration));
 
         if self.config.max_speed() > 0.0 {
             app.add_system(speed_limmit.before(integration));
@@ -59,6 +57,6 @@ impl Plugin for FishicsPlugin {
             app.add_system_to_stage(CoreStage::PreUpdate, create_mesh_renders.after(integration));
         }
 
-        app.add_system(impulse_resolution);
+        app.add_system(impulse_resolution::<ClassicImpulseResolver>);
     }
 }

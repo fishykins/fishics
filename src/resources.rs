@@ -1,8 +1,11 @@
 use bevy_inspector_egui::{Inspectable, widgets::ResourceInspector};
 
+use crate::systems::core::ClassicImpulseResolver;
+
 #[derive(Inspectable, Default)]
 pub struct Resources {
     fishics: ResourceInspector<FishicsConfig>,
+    resolver: ResourceInspector<ClassicImpulseResolver>,
 }
 
 
