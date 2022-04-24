@@ -1,11 +1,8 @@
-use bevy_inspector_egui::RegisterInspectable;
-
 use crate::components::*;
+use crate::resources::*;
 use crate::systems::*;
-use crate::BroadPhasePairs;
-use crate::FishicsConfig;
-use crate::Manifolds;
 use bevy::prelude::*;
+use bevy_inspector_egui::RegisterInspectable;
 
 pub struct FishicsPlugin {
     pub apply_transforms: bool,
@@ -39,6 +36,8 @@ impl Plugin for FishicsPlugin {
         app.insert_resource(BroadPhasePairs::new())
             .insert_resource(Manifolds::new())
             .insert_resource(self.config.clone());
+
+        app.add_asset::<PhysicsMaterial>();
 
         app.add_system(integration.before(narrow_phase))
             .add_system(narrow_phase.before(impulse_resolution));

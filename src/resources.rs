@@ -1,20 +1,27 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::{Inspectable, widgets::ResourceInspector};
 use prima::{Collision, Vector};
+
+#[derive(Inspectable, Default)]
+pub struct Resources {
+    config: ResourceInspector<FishicsConfig>,
+}
+
 #[derive(Debug, Clone)]
 pub struct BroadPhasePairs {
     pub pairs: Vec<(Entity, Entity)>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Manifolds(Vec<Manifold>);
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Inspectable)]
 pub struct FishicsConfig {
     pub scale: f32,
     max_speed: f32,
+    #[inspectable(ignore)]
     max_speed_squared: f32,
 }
 
+#[derive(Debug, Clone)]
+pub struct Manifolds(Vec<Manifold>);
 #[derive(Debug, Clone)]
 pub struct Manifold {
     pub a: Entity,
@@ -32,7 +39,7 @@ impl BroadPhasePairs {
 
 impl Manifold {
     pub fn new(a: Entity, b: Entity, collision: Collision<f32>) -> Self {
-        let n = collision.normal;
+        let n = collision.normal.normalize();
         let p = collision.penetration;
         Self {
             a,

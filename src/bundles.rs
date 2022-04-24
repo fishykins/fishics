@@ -1,6 +1,5 @@
-use bevy::prelude::Bundle;
-
-use crate::components::*;
+use bevy::prelude::{Bundle, Handle};
+use crate::{components::*};
 
 #[derive(Bundle, Default)]
 pub struct RigidBodyBundle {
@@ -9,7 +8,7 @@ pub struct RigidBodyBundle {
     pub mass: Mass,
     pub velocity: Velocity,
     pub forces: Forces,
-    pub material: PhysicsMaterial,
+    pub properties: Handle<PhysicsMaterial>,
     pub render: ColliderRender,
 }
 
@@ -17,6 +16,7 @@ pub struct RigidBodyBundle {
 pub struct StaticRigidBodyBundle {
     pub rb: RigidBody,
     pub collider: Collider,
-    pub material: PhysicsMaterial,
+    pub properties: Handle<PhysicsMaterial>,
     pub render: ColliderRender,
 }
+
