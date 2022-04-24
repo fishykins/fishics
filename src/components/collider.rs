@@ -1,4 +1,4 @@
-use crate::{AbstractShape, RigidBody};
+use crate::{AbstractShape, components::RigidBody};
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
 use prima::{Aabr, Circle, Point, Shape};

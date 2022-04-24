@@ -4,7 +4,9 @@ use prima::{Point, Vector};
 
 #[derive(Debug, Clone, Copy, Default, Component, Inspectable)]
 pub struct RigidBody {
+    /// Position of the center of mass in world space.
     pub position: Vec2,
+    /// Rotation in radians. Pi is NOT applied to this value, so it is in the range 0.0f32 -> 2.0f32.
     pub rotation: f32,
 }
 
@@ -33,5 +35,10 @@ impl RigidBody {
     pub fn translate(&mut self, translation: Vector<f32>) {
         self.position.x += translation.x;
         self.position.y += translation.y;
+    }
+
+    /// The 'true' value of rotation with pi applied. 
+    pub fn applied_rotation(&self) -> f32 {
+        self.rotation * std::f32::consts::PI
     }
 }

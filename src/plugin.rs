@@ -1,6 +1,7 @@
 use crate::components::*;
 use crate::resources::*;
-use crate::systems::*;
+use crate::systems::{core::*, transforms::*, render::*};
+use crate::pipeline::*;
 use bevy::prelude::*;
 use bevy_inspector_egui::RegisterInspectable;
 

@@ -1,5 +1,6 @@
-use crate::{ImpulseObject, ImpulseResult, Manifold};
 use prima::Dot;
+
+use crate::pipeline::{ImpulseObject, ImpulseResult, Manifold};
 
 // ============================================================================
 // ============================= RESOLUTION ===================================
