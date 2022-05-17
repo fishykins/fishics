@@ -1,7 +1,7 @@
 use bevy::reflect::TypeUuid;
 use bevy_inspector_egui::Inspectable;
 
-#[derive(Debug, Clone, TypeUuid, Inspectable)]
+#[derive(Debug, Clone, Copy, TypeUuid, Inspectable)]
 #[uuid = "468845e7-5b30-4816-b3fd-22f1b4b73adc"]
 pub struct PhysicsMaterial {
     /// Coefficient of restitution, or bounciness.

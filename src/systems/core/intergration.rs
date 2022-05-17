@@ -1,8 +1,7 @@
 use bevy::prelude::*;
-use prima::Rotation;
+use prima::prelude::*;
 
-use crate::components::{RigidBody, Forces, Velocity, Mass};
-
+use crate::components::{Forces, Mass, RigidBody, Velocity};
 
 /// Apply pending forces and rotations, as well as normalize any skewed values.
 pub fn integration(
@@ -19,7 +18,7 @@ pub fn integration(
         rb.translate(velocity.linear() * dt);
 
         // Normalize the rotation
-        let r = Rotation::from_radians(rb.rotation);
-        rb.rotation = r.as_rads();
+        let r = rb.rotation + velocity.angular() * dt;
+        rb.rotation = Rotation::from_radians(r).as_radians();
     }
 }

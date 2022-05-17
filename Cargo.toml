@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.7", default-features = false }
 bevy-inspector-egui = { version = "0.10" }
-prima = { path = "../prima", features = ["glam"] }
+prima = { path = "../prima" }

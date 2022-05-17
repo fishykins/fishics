@@ -1,7 +1,8 @@
 use bevy::prelude::*;
+use prima::prelude::*;
 
 use crate::{
-    components::{Mass, RigidBody, Velocity},
+    components::{Mass, RigidBody, Velocity, PhysicsMaterial},
     pipeline::{generate_impulse_pair, Manifolds},
 };
 
@@ -9,10 +10,12 @@ use super::ImpulseResolver;
 
 pub fn impulse_resolution<F>(
     mut resolver: ResMut<F>,
+    mut vq: Query<&mut Velocity>,
     manifolds: Res<Manifolds>,
+    materials: Res<Assets<PhysicsMaterial>>,
     rbq: Query<&RigidBody>,
     mq: Query<&Mass>,
-    mut vq: Query<&mut Velocity>,
+    mat_handles: Query<&Handle<PhysicsMaterial>>,
 ) where
     F: ImpulseResolver,
 {
@@ -20,7 +23,7 @@ pub fn impulse_resolution<F>(
     
     for manifold in manifolds.iter() {
         // Collect impulse data.
-        let (a, b) = generate_impulse_pair(manifold, &mut vq, &mq, &rbq);
+        let (a, b) = generate_impulse_pair(&mut vq, manifold, &mq, &rbq, &materials, &mat_handles);
 
         // Calculate the initial force of the collision.
         let initial_force = a.m * a.v.magnitude() + b.m * b.v.magnitude();

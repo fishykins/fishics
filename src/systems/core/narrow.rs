@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use prima::Interact;
+use prima::prelude::*;
 
 use crate::{pipeline::{Manifolds, BroadPhasePairs, Manifold}, components::{RigidBody, Collider}};
 

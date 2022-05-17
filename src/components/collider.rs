@@ -1,7 +1,7 @@
 use crate::{AbstractShape, components::RigidBody};
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::{Aabr, Circle, Point, Shape};
+use prima::prelude::*;
 
 pub const DEFAULT_LAYER: u8 = 0b0000_0001;
 
@@ -37,7 +37,7 @@ impl Collider {
         }
     }
 
-    pub fn line(start: Point, end: Point) -> Self {
+    pub fn line(start: Point<f32>, end: Point<f32>) -> Self {
         Self {
             shape: AbstractShape::Line {
                 start: Vec2::new(start.x, start.y),
@@ -54,10 +54,9 @@ impl Collider {
 
     pub fn global_aabr(&self, rb: &RigidBody) -> Aabr<f32> {
         match self.shape {
-            AbstractShape::Circle { radius } => Circle::new(rb.position(), radius).bounding_box(),
+            AbstractShape::Circle { radius } => Circle::new(rb.position(), radius).bounding_rect(),
             AbstractShape::Aabr { half_extents } => {
-                let he = Point::from(half_extents);
-                Aabr::new((rb.position() - he).into(), rb.position() + he)
+                Aabr::from_point(rb.position(), half_extents.0, half_extents.1)
             }
             AbstractShape::Line { start: a, end: b } => {
                 Aabr::new(Point::new(a.x, a.y), Point::new(b.x, b.y))
@@ -69,8 +68,7 @@ impl Collider {
         match self.shape {
             AbstractShape::Circle { radius } => Box::new(Circle::new(rb.position(), radius)),
             AbstractShape::Aabr { half_extents } => {
-                let he = Point::from(half_extents);
-                Box::new(Aabr::new((rb.position() - he).into(), rb.position() + he))
+                Box::new(Aabr::from_point(rb.position(), half_extents.0, half_extents.1))
             }
             AbstractShape::Line { start: _, end: _ } => todo!(),
         }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::Vector;
+use prima::prelude::*;
 
 #[derive(Debug, Clone, Default, Component, Inspectable)]
 pub struct Forces {

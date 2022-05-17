@@ -1,5 +1,6 @@
 
 use bevy::prelude::*;
+use prima::prelude::*;
 
 use crate::{resources::FishicsConfig, components::{Velocity, RigidBody, Mass}};
 

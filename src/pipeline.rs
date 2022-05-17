@@ -1,6 +1,6 @@
-use crate::components::{Mass, RigidBody, Velocity};
+use crate::components::{Mass, RigidBody, Velocity, PhysicsMaterial};
 use bevy::prelude::*;
-use prima::{Collision, Point, Vector};
+use prima::prelude::*;
 #[derive(Debug, Clone)]
 pub struct BroadPhasePairs {
     pub pairs: Vec<(Entity, Entity)>,
@@ -14,7 +14,8 @@ pub struct Manifold {
     pub b: Entity,
     pub n: Vector<f32>,
     pub p: f32,
-    f: Option<f32>,
+    pub f: Option<f32>,
+    pub c: Point<f32>,
 }
 
 // Impulse pipeline helper-structs.
@@ -32,6 +33,10 @@ pub struct ImpulseObject {
     pub r: f32,
     /// 'center of mass', or position
     pub c: Point<f32>,
+    /// inverse moment of inertia
+    pub mi: f32,
+    /// Coefficient of restitution
+    pub cr: f32,
 }
 
 /// Result of a collision on an object.
@@ -44,15 +49,34 @@ pub struct ImpulseResult {
 }
 
 pub fn generate_impulse_pair(
-    manifold: &Manifold,
     v: &mut Query<&mut Velocity>,
+    manifold: &Manifold,
     m: &Query<&Mass>,
     rb: &Query<&RigidBody>,
+    mats: &Res<Assets<PhysicsMaterial>>,
+    mat_handles: &Query<&Handle<PhysicsMaterial>>,
 ) -> (ImpulseObject, ImpulseObject) {
     let vel_1 = v.get(manifold.a).ok();
     let vel_2 = v.get(manifold.b).ok();
     let mass_1 = m.get(manifold.a).ok();
     let mass_2 = m.get(manifold.b).ok();
+
+    let mi_1 = 1.0;
+    let mi_2 = 1.0;
+    let mut cr_1 = 1.0;
+    let mut cr_2 = 1.0;
+
+    if let Some(handle) = mat_handles.get(manifold.a).ok() {
+        if let Some(mat) = mats.get(handle) {
+            cr_1 = mat.restitution;
+        }
+    }
+    if let Some(handle) = mat_handles.get(manifold.b).ok() {
+        if let Some(mat) = mats.get(handle) {
+            cr_2 = mat.restitution;
+        }
+    }
+
 
     let v1 = if let Some(vel_1) = vel_1 {
         vel_1.linear()
@@ -97,27 +121,31 @@ pub fn generate_impulse_pair(
     let com1 = rb.get(manifold.a).unwrap().position;
     let com2 = rb.get(manifold.b).unwrap().position;
 
-    let a = ImpulseObject {
+    let a: ImpulseObject = ImpulseObject {
         m: m1,
         i: i1,
         v: v1,
         r: a1,
         c: Point::new(com1.x, com1.y),
+        cr: cr_1,
+        mi: mi_1,
     };
 
-    let b = ImpulseObject {
+    let b: ImpulseObject = ImpulseObject {
         m: m2,
         i: i2,
         v: v2,
         r: a2,
         c: Point::new(com2.x, com2.y),
+        cr: cr_2,
+        mi: mi_2,
     };
 
     (a, b)
 }
 
 impl ImpulseResult {
-    pub fn new(v: Vector, r: f32) -> Self {
+    pub fn new(v: Vector<f32>, r: f32) -> Self {
         ImpulseResult { v, r }
     }
 
@@ -153,13 +181,14 @@ impl BroadPhasePairs {
 impl Manifold {
     pub fn new(a: Entity, b: Entity, collision: Collision<f32>) -> Self {
         let n = collision.normal.normalize();
-        let p = collision.penetration;
+        let p = collision.depth;
         Self {
             a,
             b,
             n,
             p,
             f: None,
+            c: collision.point,
         }
     }
 

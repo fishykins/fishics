@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use prima::Intersect;
+use prima::prelude::*;
 
 use crate::{components::{RigidBody, Collider}, pipeline::BroadPhasePairs};
 

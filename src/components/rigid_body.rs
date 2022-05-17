@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::{Point, Vector};
+use prima::prelude::*;
 
 #[derive(Debug, Clone, Copy, Default, Component, Inspectable)]
 pub struct RigidBody {
@@ -23,7 +23,7 @@ impl RigidBody {
         self
     }
 
-    pub fn position(&self) -> Point {
+    pub fn position(&self) -> Point<f32> {
         Point::new(self.position.x, self.position.y)
     }
 

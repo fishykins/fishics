@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
-use prima::Vector;
+use prima::prelude::*;
 
 #[derive(Debug, Clone, Component, Inspectable)]
 pub struct Velocity {
@@ -22,7 +22,7 @@ impl Velocity {
         Self { linear, angular }
     }
 
-    pub fn linear(&self) -> Vector {
+    pub fn linear(&self) -> Vector<f32> {
         Vector::new(self.linear.x, self.linear.y)
     }
 
@@ -34,17 +34,17 @@ impl Velocity {
         self.magnitide_squared().sqrt()
     }
 
-    pub fn set_linear(&mut self, linear: Vector) {
+    pub fn set_linear(&mut self, linear: Vector<f32>) {
         self.linear.x = linear.x;
         self.linear.y = linear.y;
     }
 
-    pub fn add_linear(&mut self, linear: Vector) {
+    pub fn add_linear(&mut self, linear: Vector<f32>) {
         self.linear.x += linear.x;
         self.linear.y += linear.y;
     }
 
-    pub fn sub_linear(&mut self, linear: Vector) {
+    pub fn sub_linear(&mut self, linear: Vector<f32>) {
         self.linear.x -= linear.x;
         self.linear.y -= linear.y;
     }

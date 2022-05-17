@@ -1,6 +1,5 @@
 use bevy::ecs::system::Resource;
 use bevy_inspector_egui::Inspectable;
-use prima::Dot;
 
 use crate::pipeline::{ImpulseObject, ImpulseResult, Manifold};
 
@@ -47,8 +46,30 @@ impl ImpulseResolver for ClassicImpulseResolver {
         }
 
         self.collisions += 1;
-    
+        
         let rv_n = (a.v - b.v).dot(&m.n);
+        
+        // // Numerator
+        // let numerator = -(1. + a.cr) * rv_n;
+
+        // // Denominator
+        // let mass_sum_inv = a.i + b.i;
+        // let a_arm = m.c - a.c;
+        // let b_arm = m.c - b.c;
+
+        // let a_rap = a_arm.cross_product(&m.n).powi(2) * a.mi;
+        // let b_rap = b_arm.cross_product(&m.n).powi(2) * b.mi;
+        
+        // let denom = mass_sum_inv + a_rap + b_rap;
+
+        // let j = numerator / denom;
+
+        // r1.v = a.v + m.n * j * a.i;
+        // r2.v = b.v - m.n * j * b.i;
+
+        // r1.r = a.r + a.mi * a_rap * j;
+        // r2.r = b.r - b.mi * b_rap * j;
+
         let e = 1.0;
         let j = (-(1.0 + e) * rv_n) / (a.i + b.i);
         r1.v = a.v + (m.n * a.i * j);
