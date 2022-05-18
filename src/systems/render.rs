@@ -38,12 +38,12 @@ fn generate_mesh(shape: AbstractShape) -> Option<(Mesh, Vec3)> {
             let mesh = crate::build_circle(radius, 32);
             Some((mesh, Vec3::new(1.0, 1.0, 1.0)))
         }
-        AbstractShape::Aabr { half_extents } => {
+        AbstractShape::Aabr { width, height } => {
             let mesh = Mesh::from(shape::Quad {
-                size: Vec2::new(2.0, 2.0),
+                size: Vec2::new(1.0, 1.0),
                 flip: false,
             });
-            let scale = Vec3::new(half_extents.0, half_extents.1, 1.0);
+            let scale = Vec3::new(width, height, 1.0);
             Some((mesh, scale))
         }
         AbstractShape::Line { start: _, end: _ } => None,

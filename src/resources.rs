@@ -12,6 +12,7 @@ pub struct Resources {
 #[derive(Debug, Clone, Inspectable)]
 pub struct FishicsConfig {
     pub scale: f32,
+    pub time: f32,
     #[inspectable(ignore)]
     max_speed: f32,
     #[inspectable(ignore)]
@@ -22,6 +23,7 @@ impl Default for FishicsConfig {
     fn default() -> Self {
         Self {
             scale: 10.0,
+            time: 1.0,
             max_speed: 0.0,
             max_speed_squared: 0.0,
         }

@@ -1,14 +1,15 @@
 use bevy::prelude::*;
 use prima::prelude::*;
 
-use crate::components::{Forces, Mass, RigidBody, Velocity};
+use crate::{components::{Forces, Mass, RigidBody, Velocity}, resources::FishicsConfig};
 
 /// Apply pending forces and rotations, as well as normalize any skewed values.
 pub fn integration(
     time: Res<Time>,
+    cfg: Res<FishicsConfig>,
     mut bodies: Query<(&mut RigidBody, &mut Forces, &mut Velocity, &Mass)>,
 ) {
-    let dt = time.delta_seconds();
+    let dt = time.delta_seconds() * cfg.time;
     for (mut rb, mut force, mut velocity, mass) in bodies.iter_mut() {
         if mass.raw() == 0.0 {
             continue;

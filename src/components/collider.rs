@@ -15,7 +15,7 @@ impl Collider {
     pub fn square(size: f32) -> Self {
         Self {
             shape: AbstractShape::Aabr {
-                half_extents: (size / 2.0, size / 2.0),
+                width: size, height: size,
             },
             layer: DEFAULT_LAYER,
         }
@@ -24,7 +24,7 @@ impl Collider {
     pub fn rect(width: f32, height: f32) -> Self {
         Self {
             shape: AbstractShape::Aabr {
-                half_extents: (width / 2.0, height / 2.0),
+                width, height,
             },
             layer: DEFAULT_LAYER,
         }
@@ -55,8 +55,8 @@ impl Collider {
     pub fn global_aabr(&self, rb: &RigidBody) -> Aabr<f32> {
         match self.shape {
             AbstractShape::Circle { radius } => Circle::new(rb.position(), radius).bounding_rect(),
-            AbstractShape::Aabr { half_extents } => {
-                Aabr::from_point(rb.position(), half_extents.0, half_extents.1)
+            AbstractShape::Aabr { width, height } => {
+                Aabr::from_point(rb.position(), width, height)
             }
             AbstractShape::Line { start: a, end: b } => {
                 Aabr::new(Point::new(a.x, a.y), Point::new(b.x, b.y))
@@ -67,8 +67,8 @@ impl Collider {
     pub fn as_shape(&self, rb: &RigidBody) -> Box<dyn Shape<f32>> {
         match self.shape {
             AbstractShape::Circle { radius } => Box::new(Circle::new(rb.position(), radius)),
-            AbstractShape::Aabr { half_extents } => {
-                Box::new(Aabr::from_point(rb.position(), half_extents.0, half_extents.1))
+            AbstractShape::Aabr { width, height } => {
+                Box::new(Aabr::from_point(rb.position(), width, height))
             }
             AbstractShape::Line { start: _, end: _ } => todo!(),
         }
