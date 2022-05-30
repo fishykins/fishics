@@ -46,13 +46,15 @@ pub struct ImpulseResult {
     pub v: Vector<f32>,
     /// new angular velocity
     pub r: f32,
+    /// translation
+    pub t: Vector<f32>,
 }
 
 pub fn generate_impulse_pair(
     v: &mut Query<&mut Velocity>,
+    rb: &mut Query<&mut RigidBody>,
     manifold: &Manifold,
     m: &Query<&Mass>,
-    rb: &Query<&RigidBody>,
     mats: &Res<Assets<PhysicsMaterial>>,
     mat_handles: &Query<&Handle<PhysicsMaterial>>,
 ) -> (ImpulseObject, ImpulseObject) {
@@ -145,18 +147,20 @@ pub fn generate_impulse_pair(
 }
 
 impl ImpulseResult {
-    pub fn new(v: Vector<f32>, r: f32) -> Self {
-        ImpulseResult { v, r }
+    pub fn new(v: Vector<f32>, r: f32, t: Vector<f32>) -> Self {
+        ImpulseResult { v, r, t }
     }
 
     pub fn none() -> (Self, Self) {
         (
             ImpulseResult {
                 v: Vector::zero(),
+                t: Vector::zero(),
                 r: 0.0,
             },
             ImpulseResult {
                 v: Vector::zero(),
+                t: Vector::zero(),
                 r: 0.0,
             },
         )
@@ -168,6 +172,7 @@ impl Into<ImpulseResult> for ImpulseObject {
         ImpulseResult {
             v: self.v,
             r: self.r,
+            t: Vector::zero(),
         }
     }
 }

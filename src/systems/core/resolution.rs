@@ -15,12 +15,27 @@ pub trait ImpulseResolver: Default + Resource {
 /// Calculates the resulting velocities of two objects after a collision.
 /// This is technically a Resource and not a system, but it is used in the same way so it gets to hang out with the rest of the systems.
 /// to the physics loop it gets to hang out in the pipeline.
-#[derive(Default, Debug, Clone, Copy, Inspectable)]
+#[derive(Debug, Clone, Copy, Inspectable)]
 pub struct ClassicImpulseResolver {
+    #[inspectable(min = 0.0, max = 1.0)]
+    pub correction: f32,
+    #[inspectable(min = 0.0, max = 0.1)]
+    pub slop: f32,
     #[inspectable(read_only)]
     ticks: u32,
     #[inspectable(read_only)]
     collisions: u32,
+}
+
+impl Default for ClassicImpulseResolver {
+    fn default() -> Self {
+        Self {
+            correction: 0.95,
+            slop: 0.0,
+            ticks: 0,
+            collisions: 0,
+        }
+    }
 }
 
 impl ImpulseResolver for ClassicImpulseResolver {
@@ -74,8 +89,13 @@ impl ImpulseResolver for ClassicImpulseResolver {
         let j = (-(1.0 + e) * rv_n) / (a.i + b.i);
         r1.v = a.v + (m.n * a.i * j);
         r2.v = b.v - (m.n * b.i * j);
+
+        // Positional correction
+        let correction = m.n * (m.p - self.slop).max(0.0) / (a.i + b.i) * self.correction;
+        r1.t = -correction * a.i;
+        r2.t = correction * b.i;
     
-        println!("boop");
+        //println!("collision {}: {:#?}", self.collisions, m);
         (r1, r2)
     }
 }
